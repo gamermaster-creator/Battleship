@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerBoard = document.getElementById('player-board');
     const enemyBoard = document.getElementById('enemy-board');
     const messageArea = document.getElementById('message-area');
+    const turnInfo = document.getElementById('turn-info');
     const newGameButton = document.getElementById('new-game-button');
 
     const boardSize = 10;
     let playerShips = [];
     let enemyShips = [];
+    let currentPlayer = 'player';
+    let isGameOver = false;
+    let enemyFiredShots = new Set();
 
     const shipTypes = [
         { name: 'Carrier', size: 5 },
@@ -45,23 +49,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 let valid = true;
                 const shipCoords = [];
                 for (let i = 0; i < shipType.size; i++) {
-                    const currentIndex = startIndex + (isHorizontal ? i : i * boardSize);
-                    if (boardCells[currentIndex].classList.contains('ship')) {
+                    const cellIndex = startIndex + (isHorizontal ? i : i * boardSize);
+                    if (cellIndex >= 100 || boardCells[cellIndex].classList.contains('ship')) {
                         valid = false;
                         break;
                     }
-                    shipCoords.push(currentIndex);
+                    // Check adjacency
+                    const surrounding = [-1, 1, -boardSize, boardSize, -boardSize-1, -boardSize+1, boardSize-1, boardSize+1];
+                    for(const offset of surrounding) {
+                        if(boardCells[cellIndex + offset] && boardCells[cellIndex + offset].classList.contains('ship')) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if(!valid) break;
+
+                    shipCoords.push(cellIndex);
                 }
 
                 if (valid) {
                     const ship = { name: shipType.name, hits: [], coordinates: shipCoords };
                     ships.push(ship);
                     shipCoords.forEach(coord => {
-                        if (isPlayer) { // Only show player's ships
+                        if (isPlayer) { 
                            boardCells[coord].classList.add('ship');
                         }
-                        // For debugging, you might want to show enemy ships
-                        // else { boardCells[coord].classList.add('ship'); }
                     });
                     placed = true;
                 }
@@ -71,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleCellClick(e) {
+        if (currentPlayer !== 'player' || isGameOver) return;
+
         const cell = e.target;
         const cellId = parseInt(cell.dataset.id);
 
@@ -96,36 +110,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (hit) {
             if (sunkShip) {
-                messageArea.textContent = `You sunk the enemy\'s ${sunkShip.name}!`;
+                messageArea.textContent = `You sunk the enemy's ${sunkShip.name}!`;
             }
         } else {
             cell.classList.add('miss');
             messageArea.textContent = 'It\'s a MISS!';
         }
         
-        // Check for win condition
-        checkGameOver();
+        if (checkGameOver()) return;
+
+        switchTurn();
+        setTimeout(enemyTurn, 1000);
+    }
+
+    function enemyTurn() {
+        if (isGameOver) return;
+
+        let fired = false;
+        while (!fired) {
+            const shotId = Math.floor(Math.random() * (boardSize * boardSize));
+            if (!enemyFiredShots.has(shotId)) {
+                const cell = playerBoard.querySelector(`[data-id='${shotId}']`);
+                enemyFiredShots.add(shotId);
+
+                let hit = false;
+                playerShips.forEach(ship => {
+                    if (ship.coordinates.includes(shotId)) {
+                        hit = true;
+                        ship.hits.push(shotId);
+                        cell.classList.add('hit');
+                        messageArea.textContent = 'The enemy scored a HIT!';
+                        if (ship.hits.length === ship.coordinates.length) {
+                            messageArea.textContent = `The enemy sunk your ${ship.name}!`;
+                        }
+                    }
+                });
+
+                if (!hit) {
+                    cell.classList.add('miss');
+                }
+                fired = true;
+            }
+        }
+
+        if (checkGameOver()) return;
+        switchTurn();
+    }
+
+    function switchTurn() {
+        currentPlayer = currentPlayer === 'player' ? 'enemy' : 'player';
+        turnInfo.textContent = currentPlayer === 'player' ? 'Your Turn' : 'Enemy\'s Turn';
+        enemyBoard.style.pointerEvents = currentPlayer === 'player' ? 'auto' : 'none';
     }
 
     function checkGameOver() {
         const allEnemyShipsSunk = enemyShips.every(ship => ship.hits.length === ship.coordinates.length);
+        const allPlayerShipsSunk = playerShips.every(ship => ship.hits.length === ship.coordinates.length);
+
         if (allEnemyShipsSunk) {
             messageArea.textContent = 'Congratulations! You have sunk all enemy ships! You WIN!';
-            enemyBoard.removeEventListener('click', handleCellClick);
+            isGameOver = true;
+        } else if (allPlayerShipsSunk) {
+            messageArea.textContent = 'All your ships have been sunk! You LOSE!';
+            isGameOver = true;
         }
-        // Basic computer turn would go here in the future
+
+        if (isGameOver) {
+            enemyBoard.style.pointerEvents = 'none'; // Disable board
+        }
+        return isGameOver;
     }
 
     function startGame() {
+        isGameOver = false;
+        currentPlayer = 'player';
+        enemyFiredShots.clear();
+
         createBoard(playerBoard, true);
         createBoard(enemyBoard, false);
+        
         playerShips = placeShips(true);
         enemyShips = placeShips(false);
-        messageArea.textContent = 'The battle begins! Your turn.';
+        
+        turnInfo.textContent = 'Your Turn';
+        messageArea.textContent = 'The battle begins!';
+        enemyBoard.style.pointerEvents = 'auto';
     }
 
     newGameButton.addEventListener('click', startGame);
 
-    // Initial game start
     startGame();
 });
