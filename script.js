@@ -60,12 +60,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         valid = false;
                         break;
                     }
-                    // Check adjacency
-                    const surrounding = [-1, 1, -boardSize, boardSize, -boardSize-1, -boardSize+1, boardSize-1, boardSize+1];
-                    for(const offset of surrounding) {
-                        if(boardCells[cellIndex + offset] && boardCells[cellIndex + offset].classList.contains('ship')) {
-                            valid = false;
-                            break;
+                    // Check adjacency (only direct neighbors, not diagonals)
+                    const adjacentOffsets = [-1, 1, -boardSize, boardSize];
+                    for(const offset of adjacentOffsets) {
+                        const adjIndex = cellIndex + offset;
+                        // Ensure adjIndex is within bounds and on the same row/col for horizontal/vertical checks
+                        if (adjIndex >= 0 && adjIndex < boardSize * boardSize) {
+                            if (isHorizontal && (offset === -1 || offset === 1) && Math.floor(adjIndex / boardSize) !== Math.floor(cellIndex / boardSize)) continue;
+                            if (!isHorizontal && (offset === -boardSize || offset === boardSize) && (adjIndex % boardSize) !== (cellIndex % boardSize)) continue;
+                            
+                            if(boardCells[adjIndex] && boardCells[adjIndex].classList.contains('ship')) {
+                                valid = false;
+                                break;
+                            }
                         }
                     }
                     if(!valid) break;
@@ -85,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return ships;
     }
 
-    function isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, occupiedCells) {
+    function isValidPlacement(startIndex, shipSize, isHorizontal, occupiedCells, currentShipCoords = []) {
         const row = Math.floor(startIndex / boardSize);
         const col = startIndex % boardSize;
 
@@ -97,23 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < shipSize; i++) {
             const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
-            if (occupiedCells.has(currentCellIndex)) return false; // Overlap
+            
+            // Check if current cell is already occupied by another ship (excluding the ship being moved)
+            if (occupiedCells.has(currentCellIndex) && !currentShipCoords.includes(currentCellIndex)) return false; 
 
-            // Check adjacency (including diagonals)
-            const adjacentOffsets = [-1, 1, -boardSize, boardSize, -boardSize - 1, -boardSize + 1, boardSize - 1, boardSize + 1, 0];
+            // Check adjacency (only direct neighbors, not diagonals)
+            const adjacentOffsets = [-1, 1, -boardSize, boardSize];
             for (const offset of adjacentOffsets) {
-                const adjacentIndex = currentCellIndex + offset;
-                if (adjacentIndex >= 0 && adjacentIndex < boardSize * boardSize && adjacentIndex !== currentCellIndex) {
-                    // Ensure adjacent cell is on the same row/col for direct neighbors, or within 1 unit for diagonals
-                    const adjRow = Math.floor(adjacentIndex / boardSize);
-                    const adjCol = adjacentIndex % boardSize;
-                    const diffRow = Math.abs(adjRow - Math.floor(currentCellIndex / boardSize));
-                    const diffCol = Math.abs(adjCol - (currentCellIndex % boardSize));
+                const adjIndex = currentCellIndex + offset;
+                if (adjIndex >= 0 && adjIndex < boardSize * boardSize) {
+                    // Ensure adjIndex is on the same row/col for horizontal/vertical checks
+                    if (isHorizontal && (offset === -1 || offset === 1) && Math.floor(adjIndex / boardSize) !== Math.floor(currentCellIndex / boardSize)) continue;
+                    if (!isHorizontal && (offset === -boardSize || offset === boardSize) && (adjIndex % boardSize) !== (currentCellIndex % boardSize)) continue;
 
-                    if (diffRow <= 1 && diffCol <= 1) { // Check only immediate neighbors
-                        if (occupiedCells.has(adjacentIndex)) {
-                            return false;
-                        }
+                    // Check if adjacent cell is occupied by another ship (excluding the ship being moved)
+                    if (occupiedCells.has(adjIndex) && !currentShipCoords.includes(adjIndex)) {
+                        return false;
                     }
                 }
             }
@@ -134,7 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear previous hover highlights
         Array.from(boardCells).forEach(c => c.classList.remove('placement-hover', 'placement-invalid'));
 
-        const valid = isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, playerShipCoords);
+        // Get current coordinates of the ship being moved, if any
+        const shipBeingMoved = playerPlacedShips.find(s => s.name === selectedShipName);
+        const currentShipCoords = shipBeingMoved ? shipBeingMoved.coordinates : [];
+
+        const valid = isValidPlacement(startIndex, shipSize, isHorizontal, playerShipCoords, currentShipCoords);
 
         for (let i = 0; i < shipSize; i++) {
             const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
@@ -166,19 +176,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHorizontal = currentOrientation === 'horizontal';
         const boardCells = playerBoard.children;
 
-        if (isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, playerShipCoords)) {
-            const shipCoords = [];
+        // Get current coordinates of the ship being moved, if any
+        const shipBeingMoved = playerPlacedShips.find(s => s.name === selectedShipName);
+        const currentShipCoords = shipBeingMoved ? shipBeingMoved.coordinates : [];
+
+        if (isValidPlacement(startIndex, shipSize, isHorizontal, playerShipCoords, currentShipCoords)) {
+            // If moving an existing ship, remove its old position
+            if (shipBeingMoved) {
+                shipBeingMoved.coordinates.forEach(coord => {
+                    playerBoard.children[coord].classList.remove('ship');
+                    playerShipCoords.delete(coord);
+                });
+                // Remove from playerPlacedShips temporarily
+                playerPlacedShips = playerPlacedShips.filter(s => s.name !== selectedShipName);
+            }
+
+            const newShipCoords = [];
             for (let i = 0; i < shipSize; i++) {
                 const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
                 boardCells[currentCellIndex].classList.add('ship');
                 playerShipCoords.add(currentCellIndex);
-                shipCoords.push(currentCellIndex);
+                newShipCoords.push(currentCellIndex);
             }
-            playerPlacedShips.push({ name: selectedShipName, hits: [], coordinates: shipCoords });
+            playerPlacedShips.push({ name: selectedShipName, hits: [], coordinates: newShipCoords });
 
-            // Remove ship from selection list
+            // Update ship item in list to show it's placed
             const shipItem = document.querySelector(`.ship-item[data-ship-name='${selectedShipName}']`);
-            if (shipItem) shipItem.remove();
+            if (shipItem) {
+                shipItem.classList.remove('selected');
+                shipItem.classList.add('placed');
+            }
 
             selectedShipName = null; // Deselect ship
             messageArea.textContent = `Placed ${shipType.name}.`;
@@ -187,10 +214,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playerPlacedShips.length === shipTypes.length) {
                 messageArea.textContent = 'All ships placed! Click Start Game.';
                 startGameButton.disabled = false;
-                // Remove placement listeners from player board
-                playerBoard.removeEventListener('mouseover', handlePlayerBoardHover);
-                playerBoard.removeEventListener('mouseout', handlePlayerBoardLeave);
-                playerBoard.removeEventListener('click', handlePlayerBoardClickForPlacement);
+            } else {
+                startGameButton.disabled = true;
             }
         } else {
             messageArea.textContent = 'Invalid placement. Try again.';
@@ -198,11 +223,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function selectShip(shipName) {
+        // If a ship is currently selected, deselect it first
+        if (selectedShipName) {
+            const prevSelectedItem = document.querySelector(`.ship-item[data-ship-name='${selectedShipName}']`);
+            if (prevSelectedItem) prevSelectedItem.classList.remove('selected');
+        }
+
         selectedShipName = shipName;
-        Array.from(shipListContainer.children).forEach(item => item.classList.remove('selected'));
         const selectedItem = document.querySelector(`.ship-item[data-ship-name='${shipName}']`);
         if (selectedItem) selectedItem.classList.add('selected');
         messageArea.textContent = `Selected ${shipName}. Place it on your board.`;
+
+        // If the selected ship was already placed, remove it from the board temporarily
+        const shipToEdit = playerPlacedShips.find(s => s.name === shipName);
+        if (shipToEdit) {
+            shipToEdit.coordinates.forEach(coord => {
+                playerBoard.children[coord].classList.remove('ship');
+                playerShipCoords.delete(coord);
+            });
+            playerPlacedShips = playerPlacedShips.filter(s => s.name !== shipName);
+            // Re-enable start game button if it was disabled due to picking up a ship
+            startGameButton.disabled = true;
+        }
     }
 
     function rotateShip() {
@@ -270,8 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
         messageArea.textContent = 'The battle begins! Your turn.';
         turnInfo.textContent = 'Your Turn';
 
-        // Remove placement listeners from player board (already done in handlePlayerBoardClickForPlacement if all ships placed)
-        // If not all ships were placed, this would be an issue, but startGameButton is disabled until all are placed.
+        // Remove placement listeners from player board
+        playerBoard.removeEventListener('mouseover', handlePlayerBoardHover);
+        playerBoard.removeEventListener('mouseout', handlePlayerBoardLeave);
+        playerBoard.removeEventListener('click', handlePlayerBoardClickForPlacement);
     }
 
     function handleCellClick(e) {

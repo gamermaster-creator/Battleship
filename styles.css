@@ -1,5 +1,18 @@
 body {
-    background-color: #f0f8ff; /* AliceBlue */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1a2a3a; /* Dark blue-gray */
+    color: #e0e0e0;
+}
+
+h1, h2, h3 {
+    color: #ffffff;
+}
+
+.container {
+    background-color: #2a3a4a;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
 .grid-container {
@@ -9,99 +22,99 @@ body {
     width: 350px;
     height: 350px;
     margin: 0 auto;
-    border: 2px solid #000;
+    border: 3px solid #0056b3; /* Darker blue border */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 .grid-cell {
     width: 35px;
     height: 35px;
-    border: 1px solid #ccc;
-    background-color: #add8e6; /* LightBlue */
+    border: 1px solid #004085; /* Slightly darker blue for cell borders */
+    background-color: #007bff; /* Medium blue for water */
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .grid-cell:hover {
-    background-color: #87ceeb; /* SkyBlue */
+    background-color: #0056b3; /* Darker blue on hover */
 }
 
 .ship {
-    background-color: #808080; /* Gray */
+    background-color: #6c757d; /* Gray for ships */
+    background-image: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    border: 1px solid #343a40;
 }
 
 .hit {
-    background-color: #ff0000; /* Red */
+    background-color: #dc3545; /* Red for hit */
+    background-image: radial-gradient(circle, #dc3545 0%, #8b0000 100%);
+    border: 1px solid #8b0000;
 }
 
 .miss {
-    background-color: #4682b4; /* SteelBlue */
-}
-
-body {
-    background-color: #f0f8ff; /* AliceBlue */
-}
-
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    grid-template-rows: repeat(10, 1fr);
-    width: 350px;
-    height: 350px;
-    margin: 0 auto;
-    border: 2px solid #000;
-}
-
-.grid-cell {
-    width: 35px;
-    height: 35px;
-    border: 1px solid #ccc;
-    background-color: #add8e6; /* LightBlue */
-    cursor: pointer;
-}
-
-.grid-cell:hover {
-    background-color: #87ceeb; /* SkyBlue */
-}
-
-.ship {
-    background-color: #808080; /* Gray */
-}
-
-.hit {
-    background-color: #ff0000; /* Red */
-}
-
-.miss {
-    background-color: #4682b4; /* SteelBlue */
+    background-color: #6c757d; /* Darker gray for miss */
+    background-image: radial-gradient(circle, #6c757d 0%, #343a40 100%);
+    border: 1px solid #343a40;
 }
 
 #player-board .grid-cell {
     cursor: default; /* Allow clicking for placement */
 }
 
+#enemy-board .grid-cell {
+    cursor: crosshair; /* Indicate targetable area */
+}
+
 #placement-controls {
-    background-color: #e9ecef;
+    background-color: #3a4a5a;
     padding: 15px;
     border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 .ship-item {
-    border: 1px solid #6c757d;
-    padding: 5px 10px;
-    margin: 0 5px;
+    border: 1px solid #0056b3;
+    padding: 8px 15px;
+    margin: 0 8px;
     cursor: pointer;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.ship-item:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
 }
 
 .ship-item.selected {
-    background-color: #007bff;
-    color: white;
+    background-color: #28a745; /* Green for selected */
+    border-color: #28a745;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.7);
+}
+
+.ship-item.placed {
+    background-color: #6c757d; /* Gray for placed */
+    border-color: #6c757d;
+    cursor: pointer;
 }
 
 .placement-hover {
-    background-color: #d4edda; /* Light green for valid placement */
+    background-color: #28a745; /* Green for valid placement */
+    opacity: 0.7;
 }
 
 .placement-invalid {
-    background-color: #f8d7da; /* Light red for invalid placement */
+    background-color: #dc3545; /* Red for invalid placement */
+    opacity: 0.7;
+}
+
+.btn-primary, .btn-secondary, .btn-success {
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover, .btn-secondary:hover, .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
