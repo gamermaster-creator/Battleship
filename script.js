@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageArea = document.getElementById('message-area');
     const turnInfo = document.getElementById('turn-info');
     const newGameButton = document.getElementById('new-game-button');
+    const placementControls = document.getElementById('placement-controls');
+    const shipListContainer = document.getElementById('ship-list');
+    const rotateButton = document.getElementById('rotate-button');
+    const startGameButton = document.getElementById('start-game-button');
 
     const boardSize = 10;
     let playerShips = [];
@@ -11,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlayer = 'player';
     let isGameOver = false;
     let enemyFiredShots = new Set();
+
+    let isPlacementPhase = true;
+    let selectedShipName = null;
+    let currentOrientation = 'horizontal'; // 'horizontal' or 'vertical'
+    let playerPlacedShips = []; // To store ships after player places them
+    let playerShipCoords = new Set(); // To keep track of occupied cells on player board
 
     const shipTypes = [
         { name: 'Carrier', size: 5 },
@@ -26,17 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.createElement('div');
             cell.classList.add('grid-cell');
             cell.dataset.id = i;
-            if (!isPlayer) {
-                cell.addEventListener('click', handleCellClick);
-            }
             boardElement.appendChild(cell);
         }
     }
 
-    function placeShips(isPlayer) {
+    function placeEnemyShips() {
         const ships = [];
-        const boardElement = isPlayer ? playerBoard : enemyBoard;
-        const boardCells = boardElement.children;
+        const boardCells = enemyBoard.children;
 
         shipTypes.forEach(shipType => {
             let placed = false;
@@ -70,11 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (valid) {
                     const ship = { name: shipType.name, hits: [], coordinates: shipCoords };
                     ships.push(ship);
-                    shipCoords.forEach(coord => {
-                        if (isPlayer) { 
-                           boardCells[coord].classList.add('ship');
-                        }
-                    });
+                    // For debugging, you might want to show enemy ships
+                    // shipCoords.forEach(coord => { boardCells[coord].classList.add('ship'); });
                     placed = true;
                 }
             }
@@ -82,8 +85,197 @@ document.addEventListener('DOMContentLoaded', () => {
         return ships;
     }
 
+    function isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, occupiedCells) {
+        const row = Math.floor(startIndex / boardSize);
+        const col = startIndex % boardSize;
+
+        if (isHorizontal) {
+            if (col + shipSize > boardSize) return false; // Out of bounds
+        } else {
+            if (row + shipSize > boardSize) return false; // Out of bounds
+        }
+
+        for (let i = 0; i < shipSize; i++) {
+            const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
+            if (occupiedCells.has(currentCellIndex)) return false; // Overlap
+
+            // Check adjacency (including diagonals)
+            const adjacentOffsets = [-1, 1, -boardSize, boardSize, -boardSize - 1, -boardSize + 1, boardSize - 1, boardSize + 1, 0];
+            for (const offset of adjacentOffsets) {
+                const adjacentIndex = currentCellIndex + offset;
+                if (adjacentIndex >= 0 && adjacentIndex < boardSize * boardSize && adjacentIndex !== currentCellIndex) {
+                    // Ensure adjacent cell is on the same row/col for direct neighbors, or within 1 unit for diagonals
+                    const adjRow = Math.floor(adjacentIndex / boardSize);
+                    const adjCol = adjacentIndex % boardSize;
+                    const diffRow = Math.abs(adjRow - Math.floor(currentCellIndex / boardSize));
+                    const diffCol = Math.abs(adjCol - (currentCellIndex % boardSize));
+
+                    if (diffRow <= 1 && diffCol <= 1) { // Check only immediate neighbors
+                        if (occupiedCells.has(adjacentIndex)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    function handlePlayerBoardHover(e) {
+        if (!isPlacementPhase || !selectedShipName) return;
+
+        const cell = e.target;
+        const startIndex = parseInt(cell.dataset.id);
+        const shipType = shipTypes.find(s => s.name === selectedShipName);
+        const shipSize = shipType.size;
+        const isHorizontal = currentOrientation === 'horizontal';
+        const boardCells = playerBoard.children;
+
+        // Clear previous hover highlights
+        Array.from(boardCells).forEach(c => c.classList.remove('placement-hover', 'placement-invalid'));
+
+        const valid = isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, playerShipCoords);
+
+        for (let i = 0; i < shipSize; i++) {
+            const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
+            if (currentCellIndex < boardSize * boardSize) { // Ensure index is within bounds
+                const targetCell = boardCells[currentCellIndex];
+                if (targetCell) {
+                    if (valid) {
+                        targetCell.classList.add('placement-hover');
+                    } else {
+                        targetCell.classList.add('placement-invalid');
+                    }
+                }
+            }
+        }
+    }
+
+    function handlePlayerBoardLeave() {
+        if (!isPlacementPhase) return;
+        Array.from(playerBoard.children).forEach(c => c.classList.remove('placement-hover', 'placement-invalid'));
+    }
+
+    function handlePlayerBoardClickForPlacement(e) {
+        if (!isPlacementPhase || !selectedShipName) return;
+
+        const cell = e.target;
+        const startIndex = parseInt(cell.dataset.id);
+        const shipType = shipTypes.find(s => s.name === selectedShipName);
+        const shipSize = shipType.size;
+        const isHorizontal = currentOrientation === 'horizontal';
+        const boardCells = playerBoard.children;
+
+        if (isValidPlacement(startIndex, shipSize, isHorizontal, boardCells, playerShipCoords)) {
+            const shipCoords = [];
+            for (let i = 0; i < shipSize; i++) {
+                const currentCellIndex = startIndex + (isHorizontal ? i : i * boardSize);
+                boardCells[currentCellIndex].classList.add('ship');
+                playerShipCoords.add(currentCellIndex);
+                shipCoords.push(currentCellIndex);
+            }
+            playerPlacedShips.push({ name: selectedShipName, hits: [], coordinates: shipCoords });
+
+            // Remove ship from selection list
+            const shipItem = document.querySelector(`.ship-item[data-ship-name='${selectedShipName}']`);
+            if (shipItem) shipItem.remove();
+
+            selectedShipName = null; // Deselect ship
+            messageArea.textContent = `Placed ${shipType.name}.`;
+            Array.from(boardCells).forEach(c => c.classList.remove('placement-hover', 'placement-invalid'));
+
+            if (playerPlacedShips.length === shipTypes.length) {
+                messageArea.textContent = 'All ships placed! Click Start Game.';
+                startGameButton.disabled = false;
+                // Remove placement listeners from player board
+                playerBoard.removeEventListener('mouseover', handlePlayerBoardHover);
+                playerBoard.removeEventListener('mouseout', handlePlayerBoardLeave);
+                playerBoard.removeEventListener('click', handlePlayerBoardClickForPlacement);
+            }
+        } else {
+            messageArea.textContent = 'Invalid placement. Try again.';
+        }
+    }
+
+    function selectShip(shipName) {
+        selectedShipName = shipName;
+        Array.from(shipListContainer.children).forEach(item => item.classList.remove('selected'));
+        const selectedItem = document.querySelector(`.ship-item[data-ship-name='${shipName}']`);
+        if (selectedItem) selectedItem.classList.add('selected');
+        messageArea.textContent = `Selected ${shipName}. Place it on your board.`;
+    }
+
+    function rotateShip() {
+        currentOrientation = currentOrientation === 'horizontal' ? 'vertical' : 'horizontal';
+        rotateButton.textContent = `Rotate Ship (${currentOrientation === 'horizontal' ? 'Horizontal' : 'Vertical'})`;
+        messageArea.textContent = `Orientation set to ${currentOrientation}.`;
+        // Trigger a hover update if a ship is selected and mouse is over the board
+        const event = new Event('mouseover');
+        playerBoard.dispatchEvent(event);
+    }
+
+    function initPlacementPhase() {
+        isPlacementPhase = true;
+        isGameOver = false;
+        currentPlayer = 'player';
+        selectedShipName = null;
+        currentOrientation = 'horizontal';
+        playerPlacedShips = [];
+        playerShipCoords.clear();
+        enemyFiredShots.clear();
+
+        // Clear boards
+        createBoard(playerBoard, true);
+        createBoard(enemyBoard, false);
+
+        // Show placement controls, hide game info
+        placementControls.style.display = 'block';
+        document.getElementById('game-info').style.display = 'none';
+        enemyBoard.style.pointerEvents = 'none'; // Disable enemy board during placement
+
+        messageArea.textContent = 'Place your ships on the board.';
+        turnInfo.textContent = ''; // Clear turn info during placement
+        startGameButton.disabled = true;
+        rotateButton.textContent = 'Rotate Ship (Horizontal)';
+
+        // Populate ship list
+        shipListContainer.innerHTML = '';
+        shipTypes.forEach(shipType => {
+            const shipItem = document.createElement('div');
+            shipItem.classList.add('ship-item');
+            shipItem.dataset.shipName = shipType.name;
+            shipItem.textContent = `${shipType.name} (${shipType.size})`;
+            shipItem.addEventListener('click', () => selectShip(shipType.name));
+            shipListContainer.appendChild(shipItem);
+        });
+
+        // Add placement listeners to player board
+        playerBoard.addEventListener('mouseover', handlePlayerBoardHover);
+        playerBoard.addEventListener('mouseout', handlePlayerBoardLeave);
+        playerBoard.addEventListener('click', handlePlayerBoardClickForPlacement);
+
+        rotateButton.addEventListener('click', rotateShip);
+        startGameButton.addEventListener('click', finalizeGameStart);
+    }
+
+    function finalizeGameStart() {
+        isPlacementPhase = false;
+        placementControls.style.display = 'none';
+        document.getElementById('game-info').style.display = 'block';
+        enemyBoard.style.pointerEvents = 'auto'; // Enable enemy board for gameplay
+
+        enemyShips = placeEnemyShips();
+        playerShips = playerPlacedShips; // Use the ships player placed
+
+        messageArea.textContent = 'The battle begins! Your turn.';
+        turnInfo.textContent = 'Your Turn';
+
+        // Remove placement listeners from player board (already done in handlePlayerBoardClickForPlacement if all ships placed)
+        // If not all ships were placed, this would be an issue, but startGameButton is disabled until all are placed.
+    }
+
     function handleCellClick(e) {
-        if (currentPlayer !== 'player' || isGameOver) return;
+        if (isPlacementPhase || currentPlayer !== 'player' || isGameOver) return;
 
         const cell = e.target;
         const cellId = parseInt(cell.dataset.id);
@@ -177,27 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isGameOver) {
             enemyBoard.style.pointerEvents = 'none'; // Disable board
+            playerBoard.style.pointerEvents = 'none'; // Disable player board too
         }
         return isGameOver;
     }
 
-    function startGame() {
-        isGameOver = false;
-        currentPlayer = 'player';
-        enemyFiredShots.clear();
+    newGameButton.addEventListener('click', initPlacementPhase);
 
-        createBoard(playerBoard, true);
-        createBoard(enemyBoard, false);
-        
-        playerShips = placeShips(true);
-        enemyShips = placeShips(false);
-        
-        turnInfo.textContent = 'Your Turn';
-        messageArea.textContent = 'The battle begins!';
-        enemyBoard.style.pointerEvents = 'auto';
-    }
-
-    newGameButton.addEventListener('click', startGame);
-
-    startGame();
+    initPlacementPhase(); // Start with placement phase
 });
