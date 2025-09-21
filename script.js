@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hit = true;
                 ship.hits.push(cellId);
                 cell.classList.add('hit');
-                messageArea.textContent = 'It's a HIT!';
+                messageArea.textContent = "It's a HIT!";
                 if (ship.hits.length === ship.coordinates.length) {
                     sunkShip = ship;
                 }
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             cell.classList.add('miss');
-            messageArea.textContent = 'It's a MISS!';
+            messageArea.textContent = "It's a MISS!";
         }
         
         if (checkGameOver()) return;
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchTurn() {
         currentPlayer = currentPlayer === 'player' ? 'enemy' : 'player';
-        turnInfo.textContent = currentPlayer === 'player' ? 'Your Turn' : 'Enemy's Turn';
+        turnInfo.textContent = currentPlayer === 'player' ? 'Your Turn' : 'Enemy\'s Turn';
         enemyBoard.style.pointerEvents = currentPlayer === 'player' ? 'auto' : 'none';
     }
 
