@@ -33,6 +33,7 @@ h1, h2, h3 {
     background-color: #007bff; /* Medium blue for water */
     cursor: pointer;
     transition: background-color 0.2s ease;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
 }
 
 .grid-cell:hover {
@@ -43,18 +44,21 @@ h1, h2, h3 {
     background-color: #6c757d; /* Gray for ships */
     background-image: linear-gradient(135deg, #6c757d 0%, #495057 100%);
     border: 1px solid #343a40;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
 }
 
 .hit {
     background-color: #dc3545; /* Red for hit */
     background-image: radial-gradient(circle, #dc3545 0%, #8b0000 100%);
     border: 1px solid #8b0000;
+    box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.7);
 }
 
 .miss {
     background-color: #6c757d; /* Darker gray for miss */
     background-image: radial-gradient(circle, #6c757d 0%, #343a40 100%);
     border: 1px solid #343a40;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 #player-board .grid-cell {
