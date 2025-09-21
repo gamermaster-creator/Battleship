@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battleship</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container text-center">
+        <h1 class="my-4">Battleship</h1>
+        <div id="game-info" class="mb-3">
+            <p id="turn-info">Your Turn</p>
+            <p id="message-area">Good luck!</p>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Your Board</h2>
+                <div id="player-board" class="grid-container"></div>
+            </div>
+            <div class="col-md-6">
+                <h2>Enemy Board</h2>
+                <div id="enemy-board" class="grid-container"></div>
+            </div>
+        </div>
+        <button id="new-game-button" class="btn btn-primary mt-4">New Game</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
