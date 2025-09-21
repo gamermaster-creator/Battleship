@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.createElement('div');
             cell.classList.add('grid-cell');
             cell.dataset.id = i;
+            // Removed individual cell listener
             boardElement.appendChild(cell);
         }
     }
@@ -317,9 +318,15 @@ document.addEventListener('DOMContentLoaded', () => {
         playerBoard.removeEventListener('mouseover', handlePlayerBoardHover);
         playerBoard.removeEventListener('mouseout', handlePlayerBoardLeave);
         playerBoard.removeEventListener('click', handlePlayerBoardClickForPlacement);
+
+        // Add event listener to enemyBoard for game clicks (event delegation)
+        enemyBoard.addEventListener('click', handleGameClick);
     }
 
-    function handleCellClick(e) {
+    // New function for handling game clicks on enemy board
+    function handleGameClick(e) {
+        if (!e.target.classList.contains('grid-cell')) return; // Only process clicks on grid cells
+
         console.log('handleCellClick triggered');
         console.log('isPlacementPhase:', isPlacementPhase, 'currentPlayer:', currentPlayer, 'isGameOver:', isGameOver);
         if (isPlacementPhase || currentPlayer !== 'player' || isGameOver) return;
@@ -340,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hit = true;
                 ship.hits.push(cellId);
                 cell.classList.add('hit');
-                messageArea.textContent = 'It\'s a HIT!';
+                messageArea.textContent = 'It's a HIT!';
                 if (ship.hits.length === ship.coordinates.length) {
                     sunkShip = ship;
                 }
@@ -353,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             cell.classList.add('miss');
-            messageArea.textContent = 'It\'s a MISS!';
+            messageArea.textContent = 'It's a MISS!';
         }
         
         if (checkGameOver()) return;
@@ -398,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchTurn() {
         currentPlayer = currentPlayer === 'player' ? 'enemy' : 'player';
-        turnInfo.textContent = currentPlayer === 'player' ? 'Your Turn' : 'Enemy\'s Turn';
+        turnInfo.textContent = currentPlayer === 'player' ? 'Your Turn' : 'Enemy's Turn';
         enemyBoard.style.pointerEvents = currentPlayer === 'player' ? 'auto' : 'none';
     }
 
