@@ -305,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         placementControls.style.display = 'none';
         document.getElementById('game-info').style.display = 'block';
         enemyBoard.style.pointerEvents = 'auto'; // Enable enemy board for gameplay
+        console.log('finalizeGameStart called. isPlacementPhase:', isPlacementPhase);
 
         enemyShips = placeEnemyShips();
         playerShips = playerPlacedShips; // Use the ships player placed
@@ -319,6 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleCellClick(e) {
+        console.log('handleCellClick triggered');
+        console.log('isPlacementPhase:', isPlacementPhase, 'currentPlayer:', currentPlayer, 'isGameOver:', isGameOver);
         if (isPlacementPhase || currentPlayer !== 'player' || isGameOver) return;
 
         const cell = e.target;
